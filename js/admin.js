@@ -269,9 +269,8 @@ const AdminApp = (() => {
     updateStats();
     renderCustomers();
     renderProducts();
+    renderInvoiceList();
     populateCustomerDropdown();
-    renderSavedInvoices();
-    renderRecentInvoices();
     addLineItem();
   }
 
@@ -288,8 +287,79 @@ const AdminApp = (() => {
       .querySelector(`.sidebar-tab[data-tab="${tab}"]`)
       .classList.add("active");
 
-    if (tab === "dashboard") updateStats();
-    if (tab === "invoices") populateCustomerDropdown();
+    if (tab === "invoices") {
+      showInvoiceListView();
+      updateStats();
+      renderInvoiceList();
+    }
+  }
+
+  // ---------- Invoice List / Form Toggle ----------
+  function showInvoiceForm() {
+    document.getElementById("invoice-list-view").style.display = "none";
+    document.getElementById("invoice-form-view").style.display = "block";
+    populateCustomerDropdown();
+    resetInvoice();
+  }
+
+  function showInvoiceListView() {
+    document.getElementById("invoice-list-view").style.display = "block";
+    document.getElementById("invoice-form-view").style.display = "none";
+  }
+
+  function renderInvoiceList() {
+    const invoices = load(STORE_INVOICES).slice().reverse();
+    const search = (
+      document.getElementById("invoice-search")?.value || ""
+    ).toLowerCase();
+    const filtered = search
+      ? invoices.filter(
+          (inv) =>
+            (inv.number || "").toLowerCase().includes(search) ||
+            (inv.customerName || "").toLowerCase().includes(search),
+        )
+      : invoices;
+
+    const tbody = document.getElementById("invoices-body");
+    const empty = document.getElementById("invoices-empty");
+    const table = document.getElementById("invoices-table");
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = "";
+      table.style.display = "none";
+      empty.style.display = "";
+      return;
+    }
+
+    const termsLabel = {
+      prepaid: "Pre-paid",
+      net15: "Net 15",
+      net30: "Net 30",
+      net60: "Net 60",
+      net90: "Net 90",
+    };
+
+    table.style.display = "";
+    empty.style.display = "none";
+    tbody.innerHTML = filtered
+      .map(
+        (inv) => `
+      <tr>
+        <td><strong>${escHtml(inv.number)}</strong></td>
+        <td>${escHtml(inv.customerName)}</td>
+        <td>${formatDateShort(inv.createdAt)}</td>
+        <td>${termsLabel[inv.terms] || inv.terms || ""}</td>
+        <td class="invoice-total-cell">${fmt(inv.grandTotal)}</td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-edit" onclick="AdminApp.regeneratePDF('${inv.id}')">PDF</button>
+            <button class="btn-delete" onclick="AdminApp.deleteInvoice('${inv.id}')">Del</button>
+          </div>
+        </td>
+      </tr>
+    `,
+      )
+      .join("");
   }
 
   // ---------- Stats ----------
@@ -750,72 +820,47 @@ const AdminApp = (() => {
     save(STORE_INVOICES, invoices);
 
     updateStats();
-    renderSavedInvoices();
-    renderRecentInvoices();
-    alert("Invoice " + invoiceNum + " saved.");
+    renderInvoiceList();
+    showInvoiceListView();
   }
 
-  function renderSavedInvoices() {
-    const invoices = load(STORE_INVOICES).slice().reverse();
-    const container = document.getElementById("saved-invoices-list");
-    if (!container) return;
-
-    if (invoices.length === 0) {
-      container.innerHTML = '<p class="empty-state">No saved invoices.</p>';
+  function saveAndGeneratePDF() {
+    const data = gatherInvoiceData();
+    if (!data.customer) {
+      alert("Please select a customer.");
+      return;
+    }
+    if (data.lineItems.length === 0) {
+      alert("Please add at least one line item.");
       return;
     }
 
-    container.innerHTML = invoices
-      .map(
-        (inv) => `
-      <div class="saved-invoice-item">
-        <div class="saved-invoice-info">
-          <span class="saved-invoice-num">${escHtml(inv.number)}</span>
-          <span class="saved-invoice-detail">${escHtml(inv.customerName)} &middot; ${formatDateShort(inv.createdAt)}</span>
-        </div>
-        <div class="saved-invoice-actions">
-          <span class="saved-invoice-total">${fmt(inv.grandTotal)}</span>
-          <button class="btn-edit" onclick="AdminApp.regeneratePDF('${inv.id}')">PDF</button>
-          <button class="btn-delete" onclick="AdminApp.deleteInvoice('${inv.id}')">Del</button>
-        </div>
-      </div>
-    `,
-      )
-      .join("");
-  }
+    const invoices = load(STORE_INVOICES);
+    const invoiceNum = getNextInvoiceNum();
+    const invoice = {
+      id: uid(),
+      number: invoiceNum,
+      ...data,
+      customerName: data.customer.company,
+      createdAt: now(),
+    };
+    invoices.push(invoice);
+    save(STORE_INVOICES, invoices);
 
-  function renderRecentInvoices() {
-    const invoices = load(STORE_INVOICES).slice().reverse().slice(0, 5);
-    const container = document.getElementById("recent-invoices");
-    if (!container) return;
+    // Generate PDF with the saved data
+    invoice.dueDate = calcDueDate(invoice.invoiceDate, invoice.terms);
+    generatePDF(invoice);
 
-    if (invoices.length === 0) {
-      container.innerHTML =
-        '<p class="empty-state">No invoices yet. Create your first invoice in the Invoices tab.</p>';
-      return;
-    }
-
-    container.innerHTML = invoices
-      .map(
-        (inv) => `
-      <div class="recent-item">
-        <div class="recent-item-left">
-          <span class="recent-item-title">${escHtml(inv.number)} — ${escHtml(inv.customerName)}</span>
-          <span class="recent-item-sub">${formatDateShort(inv.createdAt)} &middot; ${inv.terms}</span>
-        </div>
-        <span class="recent-item-amount">${fmt(inv.grandTotal)}</span>
-      </div>
-    `,
-      )
-      .join("");
+    updateStats();
+    renderInvoiceList();
+    showInvoiceListView();
   }
 
   function deleteInvoice(id) {
     if (!confirm("Delete this invoice?")) return;
     const invoices = load(STORE_INVOICES).filter((i) => i.id !== id);
     save(STORE_INVOICES, invoices);
-    renderSavedInvoices();
-    renderRecentInvoices();
+    renderInvoiceList();
     updateStats();
   }
 
@@ -1114,6 +1159,9 @@ const AdminApp = (() => {
     handleLogin,
     logout,
     switchTab,
+    showInvoiceForm,
+    showInvoiceList: showInvoiceListView,
+    renderInvoiceList,
     openCustomerModal,
     saveCustomer,
     deleteCustomer,
@@ -1128,6 +1176,7 @@ const AdminApp = (() => {
     recalculate,
     generatePDF,
     saveInvoice,
+    saveAndGeneratePDF,
     resetInvoice,
     deleteInvoice,
     regeneratePDF,

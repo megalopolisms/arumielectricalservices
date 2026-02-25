@@ -63,9 +63,9 @@
       <!-- Sidebar -->
       <aside class="admin-sidebar">
         <div class="sidebar-tabs">
-          <button class="sidebar-tab active" data-tab="dashboard" onclick="AdminApp.switchTab('dashboard')">
-            <span class="tab-icon">&#9783;</span>
-            <span class="tab-label">Dashboard</span>
+          <button class="sidebar-tab active" data-tab="invoices" onclick="AdminApp.switchTab('invoices')">
+            <span class="tab-icon">&#128196;</span>
+            <span class="tab-label">Invoices</span>
           </button>
           <button class="sidebar-tab" data-tab="customers" onclick="AdminApp.switchTab('customers')">
             <span class="tab-icon">&#128100;</span>
@@ -75,43 +75,153 @@
             <span class="tab-icon">&#9889;</span>
             <span class="tab-label">Products</span>
           </button>
-          <button class="sidebar-tab" data-tab="invoices" onclick="AdminApp.switchTab('invoices')">
-            <span class="tab-icon">&#128196;</span>
-            <span class="tab-label">Invoices</span>
-          </button>
         </div>
       </aside>
 
       <!-- Main Content Area -->
       <main class="admin-main">
 
-        <!-- Tab: Dashboard -->
-        <section id="tab-dashboard" class="tab-content active">
-          <h1 class="page-title">Dashboard</h1>
-          <div class="stats-row">
-            <div class="stat-card">
-              <span class="stat-card-number" id="stat-customers">0</span>
-              <span class="stat-card-label">Customers</span>
+        <!-- Tab: Invoices (default landing page) -->
+        <section id="tab-invoices" class="tab-content active">
+
+          <!-- VIEW 1: Invoice List (default) -->
+          <div id="invoice-list-view">
+            <div class="tab-header">
+              <h1 class="page-title">Pro Forma Invoices</h1>
+              <button class="btn btn-primary" onclick="AdminApp.showInvoiceForm()">+ New Invoice</button>
             </div>
-            <div class="stat-card">
-              <span class="stat-card-number" id="stat-products">0</span>
-              <span class="stat-card-label">Products</span>
+            <div class="stats-row">
+              <div class="stat-card">
+                <span class="stat-card-number" id="stat-invoices">0</span>
+                <span class="stat-card-label">Invoices</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-card-number" id="stat-revenue">$0</span>
+                <span class="stat-card-label">Total Revenue</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-card-number" id="stat-customers">0</span>
+                <span class="stat-card-label">Customers</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-card-number" id="stat-products">0</span>
+                <span class="stat-card-label">Products</span>
+              </div>
             </div>
-            <div class="stat-card">
-              <span class="stat-card-number" id="stat-invoices">0</span>
-              <span class="stat-card-label">Invoices</span>
+            <div class="search-bar">
+              <input type="text" id="invoice-search" placeholder="Search invoices..." oninput="AdminApp.renderInvoiceList()">
             </div>
-            <div class="stat-card">
-              <span class="stat-card-number" id="stat-revenue">$0</span>
-              <span class="stat-card-label">Total Revenue</span>
+            <div class="data-table-wrap">
+              <table class="data-table" id="invoices-table">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Terms</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="invoices-body"></tbody>
+              </table>
+              <p id="invoices-empty" class="empty-state">No invoices yet. Click "+ New Invoice" to create your first one.</p>
             </div>
           </div>
-          <div class="recent-section">
-            <h2>Recent Invoices</h2>
-            <div id="recent-invoices" class="recent-list">
-              <p class="empty-state">No invoices yet. Create your first invoice in the Invoices tab.</p>
+
+          <!-- VIEW 2: Invoice Form (hidden until "+ New Invoice" clicked) -->
+          <div id="invoice-form-view" style="display:none;">
+            <div class="tab-header">
+              <div class="back-title-row">
+                <button class="btn-back" onclick="AdminApp.showInvoiceList()">&larr; Back</button>
+                <h1 class="page-title">New Invoice</h1>
+              </div>
+            </div>
+            <div class="invoice-builder">
+              <div class="invoice-section">
+                <h3>Customer</h3>
+                <div class="invoice-customer-row">
+                  <select id="invoice-customer" onchange="AdminApp.onCustomerSelect()">
+                    <option value="">-- Select Customer --</option>
+                  </select>
+                  <button class="btn btn-outline btn-sm" onclick="AdminApp.openCustomerModal(true)">Quick Add</button>
+                </div>
+                <div id="invoice-customer-info" class="customer-info-preview"></div>
+              </div>
+
+              <div class="invoice-section">
+                <h3>Line Items</h3>
+                <div class="line-items-header">
+                  <span class="li-product">Product/Service</span>
+                  <span class="li-qty">Qty</span>
+                  <span class="li-price">Unit Price</span>
+                  <span class="li-total">Total</span>
+                  <span class="li-action"></span>
+                </div>
+                <div id="line-items-container"></div>
+                <button class="btn btn-outline btn-sm add-line-btn" onclick="AdminApp.addLineItem()">+ Add Line Item</button>
+              </div>
+
+              <div class="invoice-section invoice-summary">
+                <div class="summary-row">
+                  <span>Subtotal</span>
+                  <span id="invoice-subtotal">$0.00</span>
+                </div>
+                <div class="summary-row">
+                  <label class="toggle-label">
+                    <input type="checkbox" id="invoice-tax-toggle" onchange="AdminApp.recalculate()">
+                    MS Sales Tax (7%)
+                  </label>
+                  <span id="invoice-tax">$0.00</span>
+                </div>
+                <div class="summary-row">
+                  <div class="discount-row">
+                    <label>Discount</label>
+                    <input type="number" id="invoice-discount" value="0" min="0" step="0.01" oninput="AdminApp.recalculate()">
+                    <select id="invoice-discount-type" onchange="AdminApp.recalculate()">
+                      <option value="percent">%</option>
+                      <option value="flat">$</option>
+                    </select>
+                  </div>
+                  <span id="invoice-discount-amt">-$0.00</span>
+                </div>
+                <div class="summary-row grand-total">
+                  <span>Grand Total</span>
+                  <span id="invoice-grand-total">$0.00</span>
+                </div>
+              </div>
+
+              <div class="invoice-section">
+                <div class="invoice-options-grid">
+                  <div class="form-group">
+                    <label for="invoice-terms">Payment Terms</label>
+                    <select id="invoice-terms">
+                      <option value="prepaid">Pre-paid</option>
+                      <option value="net15">Net 15</option>
+                      <option value="net30" selected>Net 30</option>
+                      <option value="net60">Net 60</option>
+                      <option value="net90">Net 90</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="invoice-date">Invoice Date</label>
+                    <input type="date" id="invoice-date">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="invoice-notes">Notes</label>
+                  <textarea id="invoice-notes" rows="3" placeholder="Additional notes for the customer..."></textarea>
+                </div>
+              </div>
+
+              <div class="invoice-actions">
+                <button class="btn btn-primary" onclick="AdminApp.saveAndGeneratePDF()">Save &amp; Generate PDF</button>
+                <button class="btn btn-outline" onclick="AdminApp.saveInvoice()">Save Only</button>
+                <button class="btn btn-outline" onclick="AdminApp.resetInvoice()">Clear</button>
+              </div>
             </div>
           </div>
+
         </section>
 
         <!-- Tab: Customers -->
@@ -160,104 +270,6 @@
               <tbody id="products-body"></tbody>
             </table>
             <p id="products-empty" class="empty-state" style="display:none;">No products yet. Add your first product above.</p>
-          </div>
-        </section>
-
-        <!-- Tab: Invoices -->
-        <section id="tab-invoices" class="tab-content">
-          <div class="tab-header">
-            <h1 class="page-title">Pro Forma / Invoice</h1>
-          </div>
-          <div class="invoice-builder">
-            <div class="invoice-section">
-              <h3>Customer</h3>
-              <div class="invoice-customer-row">
-                <select id="invoice-customer" onchange="AdminApp.onCustomerSelect()">
-                  <option value="">-- Select Customer --</option>
-                </select>
-                <button class="btn btn-outline btn-sm" onclick="AdminApp.openCustomerModal(true)">Quick Add</button>
-              </div>
-              <div id="invoice-customer-info" class="customer-info-preview"></div>
-            </div>
-
-            <div class="invoice-section">
-              <h3>Line Items</h3>
-              <div class="line-items-header">
-                <span class="li-product">Product/Service</span>
-                <span class="li-qty">Qty</span>
-                <span class="li-price">Unit Price</span>
-                <span class="li-total">Total</span>
-                <span class="li-action"></span>
-              </div>
-              <div id="line-items-container"></div>
-              <button class="btn btn-outline btn-sm add-line-btn" onclick="AdminApp.addLineItem()">+ Add Line Item</button>
-            </div>
-
-            <div class="invoice-section invoice-summary">
-              <div class="summary-row">
-                <span>Subtotal</span>
-                <span id="invoice-subtotal">$0.00</span>
-              </div>
-              <div class="summary-row">
-                <label class="toggle-label">
-                  <input type="checkbox" id="invoice-tax-toggle" onchange="AdminApp.recalculate()">
-                  MS Sales Tax (7%)
-                </label>
-                <span id="invoice-tax">$0.00</span>
-              </div>
-              <div class="summary-row">
-                <div class="discount-row">
-                  <label>Discount</label>
-                  <input type="number" id="invoice-discount" value="0" min="0" step="0.01" oninput="AdminApp.recalculate()">
-                  <select id="invoice-discount-type" onchange="AdminApp.recalculate()">
-                    <option value="percent">%</option>
-                    <option value="flat">$</option>
-                  </select>
-                </div>
-                <span id="invoice-discount-amt">-$0.00</span>
-              </div>
-              <div class="summary-row grand-total">
-                <span>Grand Total</span>
-                <span id="invoice-grand-total">$0.00</span>
-              </div>
-            </div>
-
-            <div class="invoice-section">
-              <div class="invoice-options-grid">
-                <div class="form-group">
-                  <label for="invoice-terms">Payment Terms</label>
-                  <select id="invoice-terms">
-                    <option value="prepaid">Pre-paid</option>
-                    <option value="net15">Net 15</option>
-                    <option value="net30" selected>Net 30</option>
-                    <option value="net60">Net 60</option>
-                    <option value="net90">Net 90</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="invoice-date">Invoice Date</label>
-                  <input type="date" id="invoice-date">
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="invoice-notes">Notes</label>
-                <textarea id="invoice-notes" rows="3" placeholder="Additional notes for the customer..."></textarea>
-              </div>
-            </div>
-
-            <div class="invoice-actions">
-              <button class="btn btn-primary" onclick="AdminApp.generatePDF()">Generate PDF</button>
-              <button class="btn btn-outline" onclick="AdminApp.saveInvoice()">Save Invoice</button>
-              <button class="btn btn-outline" onclick="AdminApp.resetInvoice()">Clear</button>
-            </div>
-
-            <!-- Saved Invoices -->
-            <div class="invoice-section" style="margin-top:2rem;">
-              <h3>Saved Invoices</h3>
-              <div id="saved-invoices-list" class="recent-list">
-                <p class="empty-state">No saved invoices.</p>
-              </div>
-            </div>
           </div>
         </section>
 

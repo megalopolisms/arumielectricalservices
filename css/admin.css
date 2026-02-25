@@ -511,6 +511,37 @@
   flex: 1;
 }
 
+/* ---------- Back Button + Title Row ---------- */
+.back-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid var(--gray-600);
+  color: var(--gray-200);
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  border-color: var(--pink);
+  color: var(--pink-light);
+}
+
+/* ---------- Invoice Total Cell ---------- */
+.invoice-total-cell {
+  color: var(--gold-light) !important;
+  font-weight: 700;
+}
+
 /* ---------- Invoice Builder ---------- */
 .invoice-builder {
   max-width: 800px;
