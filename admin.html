@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin Portal | Arumi Electrical Services</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="img/logo.png" alt="Arumi Logo">
+        <span class="brand-text">ARUMI</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="services.html">Services</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="#" id="nav-logout" class="nav-cta" style="display:none;" onclick="AdminApp.logout(); return false;">Logout</a></li>
+      </ul>
+      <button class="nav-toggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="img/logo.png" alt="Arumi Logo">
+      </div>
+      <h2>Admin Portal</h2>
+      <p>Enter your credentials to continue</p>
+      <form id="login-form" onsubmit="AdminApp.handleLogin(event)">
+        <div class="form-group">
+          <label for="login-user">Username</label>
+          <input type="text" id="login-user" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Password</label>
+          <input type="password" id="login-pass" autocomplete="current-password" required>
+        </div>
+        <div id="login-error" class="login-error"></div>
+        <button type="submit" class="btn btn-primary login-btn">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard (hidden until authenticated) -->
+  <div id="admin-dashboard" class="admin-dashboard" style="display:none;">
+    <div class="admin-layout">
+
+      <!-- Sidebar -->
+      <aside class="admin-sidebar">
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab active" data-tab="dashboard" onclick="AdminApp.switchTab('dashboard')">
+            <span class="tab-icon">&#9783;</span>
+            <span class="tab-label">Dashboard</span>
+          </button>
+          <button class="sidebar-tab" data-tab="customers" onclick="AdminApp.switchTab('customers')">
+            <span class="tab-icon">&#128100;</span>
+            <span class="tab-label">Customers</span>
+          </button>
+          <button class="sidebar-tab" data-tab="products" onclick="AdminApp.switchTab('products')">
+            <span class="tab-icon">&#9889;</span>
+            <span class="tab-label">Products</span>
+          </button>
+          <button class="sidebar-tab" data-tab="invoices" onclick="AdminApp.switchTab('invoices')">
+            <span class="tab-icon">&#128196;</span>
+            <span class="tab-label">Invoices</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="admin-main">
+
+        <!-- Tab: Dashboard -->
+        <section id="tab-dashboard" class="tab-content active">
+          <h1 class="page-title">Dashboard</h1>
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="stat-card-number" id="stat-customers">0</span>
+              <span class="stat-card-label">Customers</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-number" id="stat-products">0</span>
+              <span class="stat-card-label">Products</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-number" id="stat-invoices">0</span>
+              <span class="stat-card-label">Invoices</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-number" id="stat-revenue">$0</span>
+              <span class="stat-card-label">Total Revenue</span>
+            </div>
+          </div>
+          <div class="recent-section">
+            <h2>Recent Invoices</h2>
+            <div id="recent-invoices" class="recent-list">
+              <p class="empty-state">No invoices yet. Create your first invoice in the Invoices tab.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab: Customers -->
+        <section id="tab-customers" class="tab-content">
+          <div class="tab-header">
+            <h1 class="page-title">Customers</h1>
+            <button class="btn btn-primary" onclick="AdminApp.openCustomerModal()">+ Add Customer</button>
+          </div>
+          <div class="search-bar">
+            <input type="text" id="customer-search" placeholder="Search customers..." oninput="AdminApp.renderCustomers()">
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="customers-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="customers-body"></tbody>
+            </table>
+            <p id="customers-empty" class="empty-state" style="display:none;">No customers yet. Add your first customer above.</p>
+          </div>
+        </section>
+
+        <!-- Tab: Products -->
+        <section id="tab-products" class="tab-content">
+          <div class="tab-header">
+            <h1 class="page-title">Products &amp; Services</h1>
+            <button class="btn btn-primary" onclick="AdminApp.openProductModal()">+ Add Product</button>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="products-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Unit Price</th>
+                  <th>Unit</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="products-body"></tbody>
+            </table>
+            <p id="products-empty" class="empty-state" style="display:none;">No products yet. Add your first product above.</p>
+          </div>
+        </section>
+
+        <!-- Tab: Invoices -->
+        <section id="tab-invoices" class="tab-content">
+          <div class="tab-header">
+            <h1 class="page-title">Pro Forma / Invoice</h1>
+          </div>
+          <div class="invoice-builder">
+            <div class="invoice-section">
+              <h3>Customer</h3>
+              <div class="invoice-customer-row">
+                <select id="invoice-customer" onchange="AdminApp.onCustomerSelect()">
+                  <option value="">-- Select Customer --</option>
+                </select>
+                <button class="btn btn-outline btn-sm" onclick="AdminApp.openCustomerModal(true)">Quick Add</button>
+              </div>
+              <div id="invoice-customer-info" class="customer-info-preview"></div>
+            </div>
+
+            <div class="invoice-section">
+              <h3>Line Items</h3>
+              <div class="line-items-header">
+                <span class="li-product">Product/Service</span>
+                <span class="li-qty">Qty</span>
+                <span class="li-price">Unit Price</span>
+                <span class="li-total">Total</span>
+                <span class="li-action"></span>
+              </div>
+              <div id="line-items-container"></div>
+              <button class="btn btn-outline btn-sm add-line-btn" onclick="AdminApp.addLineItem()">+ Add Line Item</button>
+            </div>
+
+            <div class="invoice-section invoice-summary">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <span id="invoice-subtotal">$0.00</span>
+              </div>
+              <div class="summary-row">
+                <label class="toggle-label">
+                  <input type="checkbox" id="invoice-tax-toggle" onchange="AdminApp.recalculate()">
+                  MS Sales Tax (7%)
+                </label>
+                <span id="invoice-tax">$0.00</span>
+              </div>
+              <div class="summary-row">
+                <div class="discount-row">
+                  <label>Discount</label>
+                  <input type="number" id="invoice-discount" value="0" min="0" step="0.01" oninput="AdminApp.recalculate()">
+                  <select id="invoice-discount-type" onchange="AdminApp.recalculate()">
+                    <option value="percent">%</option>
+                    <option value="flat">$</option>
+                  </select>
+                </div>
+                <span id="invoice-discount-amt">-$0.00</span>
+              </div>
+              <div class="summary-row grand-total">
+                <span>Grand Total</span>
+                <span id="invoice-grand-total">$0.00</span>
+              </div>
+            </div>
+
+            <div class="invoice-section">
+              <div class="invoice-options-grid">
+                <div class="form-group">
+                  <label for="invoice-terms">Payment Terms</label>
+                  <select id="invoice-terms">
+                    <option value="prepaid">Pre-paid</option>
+                    <option value="net15">Net 15</option>
+                    <option value="net30" selected>Net 30</option>
+                    <option value="net60">Net 60</option>
+                    <option value="net90">Net 90</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="invoice-date">Invoice Date</label>
+                  <input type="date" id="invoice-date">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="invoice-notes">Notes</label>
+                <textarea id="invoice-notes" rows="3" placeholder="Additional notes for the customer..."></textarea>
+              </div>
+            </div>
+
+            <div class="invoice-actions">
+              <button class="btn btn-primary" onclick="AdminApp.generatePDF()">Generate PDF</button>
+              <button class="btn btn-outline" onclick="AdminApp.saveInvoice()">Save Invoice</button>
+              <button class="btn btn-outline" onclick="AdminApp.resetInvoice()">Clear</button>
+            </div>
+
+            <!-- Saved Invoices -->
+            <div class="invoice-section" style="margin-top:2rem;">
+              <h3>Saved Invoices</h3>
+              <div id="saved-invoices-list" class="recent-list">
+                <p class="empty-state">No saved invoices.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay" onclick="AdminApp.closeModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Customer</h3>
+        <button class="modal-close" onclick="AdminApp.closeModal()">&times;</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="js/particles.js"></script>
+  <script src="js/main.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
