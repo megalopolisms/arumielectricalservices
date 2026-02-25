@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.arumielec.com/sitemap.xml
+
+# Arumi Electrical Services — www.arumielec.com
+# MSBOC Licensed Electrician in Biloxi, MS
